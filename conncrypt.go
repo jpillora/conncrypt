@@ -11,12 +11,13 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-var salt = []byte("conncrypt")
-
+//Confg defaults
 const DefaultIterations = 2048
 const DefaultKeySize = 32 //256bits
 var DefaultHashFunc = sha256.New
+var DefaultSalt = []byte("conncrypt")
 
+//Config stores the PBKDF2 key generation parameters
 type Config struct {
 	Password   string
 	Salt       []byte
@@ -25,10 +26,12 @@ type Config struct {
 	HashFunc   func() hash.Hash
 }
 
+//New creates an AES encrypted net.Conn by generating
+//a key using PBKDF2 with the provided configuration
 func New(conn net.Conn, c *Config) net.Conn {
 	//set defaults
 	if len(c.Salt) == 0 {
-		c.Salt = salt
+		c.Salt = DefaultSalt
 	}
 	if c.Iterations == 0 {
 		c.Iterations = DefaultIterations
@@ -46,6 +49,7 @@ func New(conn net.Conn, c *Config) net.Conn {
 	return conn
 }
 
+//NewFromKey creates an AES encrypted net.Conn using the provided key
 func NewFromKey(conn net.Conn, key []byte) (net.Conn, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
@@ -61,22 +65,22 @@ func NewFromKey(conn net.Conn, key []byte) (net.Conn, error) {
 	writer := &cipher.StreamWriter{S: wstream, W: conn}
 
 	return &cryptoConn{
-		Conn:   conn,
-		reader: reader,
-		writer: writer,
+		Conn: conn,
+		r:    reader,
+		w:    writer,
 	}, nil
 }
 
 type cryptoConn struct {
 	net.Conn
-	reader io.Reader
-	writer io.Writer
+	r io.Reader
+	w io.Writer
 }
 
+//replace read and write methods
 func (c *cryptoConn) Read(p []byte) (int, error) {
-	return c.reader.Read(p)
+	return c.r.Read(p)
 }
-
 func (c *cryptoConn) Write(p []byte) (int, error) {
-	return c.writer.Write(p)
+	return c.w.Write(p)
 }
