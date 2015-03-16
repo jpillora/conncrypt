@@ -1,6 +1,6 @@
-# conncrypt
+# ConnCrypt
 
-Symmetrically encrypt your Go net.Conns
+Symmetrically encrypt your Go (Golang) net.Conns
 
 [![GoDoc](https://godoc.org/github.com/jpillora/conncrypt?status.svg)](https://godoc.org/github.com/jpillora/conncrypt)
 
