@@ -15,7 +15,11 @@ import (
 const DefaultIterations = 2048
 const DefaultKeySize = 32 //256bits
 var DefaultHashFunc = sha256.New
-var DefaultSalt = []byte("conncrypt")
+var DefaultSalt = []byte(`
+(;QUHj.BQ?RXzYSO]ifkXp/G!kFmWyXyEV6Nt!d|@bo+N$L9+<d$|g6e26T}
+Ao<:>SOd,6acYKY_ec+(x"R";\'4&fTAVu92GVA-wxBptOTM^2,iP5%)wnhW
+hwk=]Snsgymt!3gbP2pe=J//}1a?lp9ej=&TB!C_V(cT2?z8wyoL_-13fd[]
+`) //salt must be predefined in order to derive the same key
 
 //Config stores the PBKDF2 key generation parameters
 type Config struct {
@@ -42,8 +46,13 @@ func New(conn net.Conn, c *Config) net.Conn {
 	if c.HashFunc == nil {
 		c.HashFunc = DefaultHashFunc
 	}
+
 	//generate key
 	key := pbkdf2.Key([]byte(c.Password), c.Salt, c.Iterations, c.KeySize, c.HashFunc)
+
+	// could use scrypt, but it's a bit slow...
+	// dk, err := scrypt.Key([]byte(c.Password), c.Salt, 16384, 8, 1, 32)
+
 	//key will be always be the correct size so this will never error
 	conn, _ = NewFromKey(conn, key)
 	return conn
