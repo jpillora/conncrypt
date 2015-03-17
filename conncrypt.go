@@ -66,11 +66,11 @@ func NewFromKey(conn net.Conn, key []byte) (net.Conn, error) {
 	}
 	//hash(key) -> read IV
 	riv := DefaultHashFunc().Sum(key)
-	rstream := cipher.NewOFB(block, riv[:aes.BlockSize])
+	rstream := cipher.NewCFBDecrypter(block, riv[:aes.BlockSize])
 	reader := &cipher.StreamReader{S: rstream, R: conn}
 	//hash(read IV) -> write IV
 	wiv := DefaultHashFunc().Sum(riv)
-	wstream := cipher.NewOFB(block, wiv[:aes.BlockSize])
+	wstream := cipher.NewCFBEncrypter(block, wiv[:aes.BlockSize])
 	writer := &cipher.StreamWriter{S: wstream, W: conn}
 
 	return &cryptoConn{

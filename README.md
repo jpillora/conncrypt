@@ -2,6 +2,8 @@
 
 Symmetrically encrypt your Go (Golang) net.Conns
 
+:warning: **This is beta software and should not be used for anything serious**
+
 [![GoDoc](https://godoc.org/github.com/jpillora/conncrypt?status.svg)](https://godoc.org/github.com/jpillora/conncrypt)
 
 ### Install
