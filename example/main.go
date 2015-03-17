@@ -1,10 +1,9 @@
 package main
 
 import (
-	"io"
+	"fmt"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	"github.com/jpillora/conncrypt"
@@ -27,7 +26,20 @@ func server() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		io.Copy(os.Stdout, conn)
+
+		conn = conncrypt.New(conn, &conncrypt.Config{
+			Password: "my-super-secret-password",
+		})
+
+		buff := make([]byte, 0xff)
+		for {
+			n, err := conn.Read(buff)
+			if err != nil {
+				log.Println(err)
+				break
+			}
+			fmt.Printf("server: #%dB: %s", n, buff[:n])
+		}
 	}
 }
 
@@ -36,7 +48,6 @@ func client() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	conn.Write([]byte("hello world\n"))
 	conn = conncrypt.New(conn, &conncrypt.Config{
 		Password: "my-super-secret-password",
 	})

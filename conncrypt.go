@@ -1,11 +1,12 @@
 package conncrypt
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha256"
+	"fmt"
 	"hash"
-	"io"
 	"net"
 
 	"golang.org/x/crypto/pbkdf2"
@@ -60,36 +61,67 @@ func New(conn net.Conn, c *Config) net.Conn {
 
 //NewFromKey creates an AES encrypted net.Conn using the provided key
 func NewFromKey(conn net.Conn, key []byte) (net.Conn, error) {
-	block, err := aes.NewCipher([]byte(key))
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	//hash(key) -> read IV
-	riv := DefaultHashFunc().Sum(key)
-	rstream := cipher.NewOFB(block, riv[:aes.BlockSize])
-	reader := &cipher.StreamReader{S: rstream, R: conn}
-	//hash(read IV) -> write IV
-	wiv := DefaultHashFunc().Sum(riv)
-	wstream := cipher.NewOFB(block, wiv[:aes.BlockSize])
-	writer := &cipher.StreamWriter{S: wstream, W: conn}
+
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := DefaultHashFunc().Sum(key)
+
+	// //hash(key) -> read IV
+	// riv := DefaultHashFunc().Sum(key)
+	// rstream := cipher.NewOFB(block, riv[:aes.BlockSize])
+	// reader := &cipher.StreamReader{S: rstream, R: conn}
+	// //hash(read IV) -> write IV
+	// wiv := DefaultHashFunc().Sum(riv)
+	// wstream := cipher.NewOFB(block, wiv[:aes.BlockSize])
+	// writer := &cipher.StreamWriter{S: wstream, W: conn}
 
 	return &cryptoConn{
-		Conn: conn,
-		r:    reader,
-		w:    writer,
+		Conn:  conn,
+		aead:  aead,
+		nonce: nonce[:aead.NonceSize()],
+		temp:  make([]byte, 4*1024),
+		buff:  &bytes.Buffer{},
 	}, nil
 }
 
 type cryptoConn struct {
 	net.Conn
-	r io.Reader
-	w io.Writer
+	aead        cipher.AEAD
+	nonce, temp []byte
+	buff        *bytes.Buffer
 }
 
 //replace read and write methods
 func (c *cryptoConn) Read(p []byte) (int, error) {
-	return c.r.Read(p)
+	fmt.Printf("read %d\n", len(p))
+
+	// return c.Conn.Read(p)
+
+	n, err := c.Conn.Read(c.temp)
+	if err != nil {
+		return 0, err
+	}
+
+	ptxt, err := c.aead.Open(nil, c.nonce, c.temp[:n], nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return copy(p, ptxt), nil
 }
+
 func (c *cryptoConn) Write(p []byte) (int, error) {
-	return c.w.Write(p)
+	fmt.Printf("write %d\n", len(p))
+	// return c.Conn.Write(p)
+	n := len(p)
+	_, err := c.Conn.Write(c.aead.Seal(nil, c.nonce, p, nil))
+	return n, err
 }
