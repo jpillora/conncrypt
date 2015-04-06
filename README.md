@@ -2,7 +2,11 @@
 
 Symmetrically encrypt your Go (Golang) net.Conns
 
-:warning: **This is beta software and should not be used for anything serious**
+:warning: **ConnCrypt does not perform any authentication, only encryption and decryption. This makes it vulnernable to a wide range of attacks (e.g. replay, data-corruption, known-plain texts). You have been warned.**
+
+ConnCrypt takes a passphrase and uses PBKDF2 to convert it into an AES256 key. The initialization vector is the hashed AES256 key. The block cipher mode is currently set to CFB, this is not as performant as OFB, though slightly more resistant to attack.
+
+This could be improved by introducing a small handshake into this process to create a secure initialization vector – will accept PRs.
 
 [![GoDoc](https://godoc.org/github.com/jpillora/conncrypt?status.svg)](https://godoc.org/github.com/jpillora/conncrypt)
 
